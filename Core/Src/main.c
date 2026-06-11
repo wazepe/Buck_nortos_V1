@@ -95,8 +95,28 @@ void SystemClock_Config(void);
 /* USER CODE BEGIN 0 */
 void oledProcess(void)
 {
-  OLED_Printf(00, 00, OLED_8X16, "T:%-.2fV ", volt.Target);
-  OLED_Printf(00, 16, OLED_8X16, "A:%-.2fV ", volt.Actual);
+  if (volt.Target < 10.0f) {
+    OLED_Printf(00, 32, OLED_8X16, "T:%-.2fV ", volt.Target);
+  } else {
+    OLED_Printf(00, 32, OLED_8X16, "T:%-.1fV ", volt.Target);
+  }
+  if (volt.Actual < 10.0f) {
+    OLED_Printf(64, 32, OLED_8X16, "A:%-.2fV ", volt.Actual);
+  } else {
+    OLED_Printf(64, 32, OLED_8X16, "A:%-.1fV ", volt.Actual);
+  }
+
+  if (sysMode == OUTPUT_MODE_PRESET) {
+    OLED_Printf(40, 00, OLED_8X16, "PRESET");
+  } else if (sysMode == OUTPUT_MODE_CUSTOM) {
+    OLED_Printf(40, 00, OLED_8X16, "CUSTOM");
+
+    if (ctrlMode == 1) {
+      OLED_Printf(00, 48, OLED_8X16, "Ctrl:BLE ");
+    } else {
+      OLED_Printf(00, 48, OLED_8X16, "Ctrl:KNOB");
+    }
+  }
 
   OLED_Update();
 }
@@ -106,6 +126,7 @@ void keyProcess(void)
   if (Key_GetEvent(KEY1, KEY_EVENT_SINGLE)) {
     // 单击按键1
     sysMode = (SysOutState)((sysMode + 1) % 2);
+    OLED_Clear();
 
     // 进入自定义输出模式 默认为旋钮控制
     if (sysMode == OUTPUT_MODE_CUSTOM) {
