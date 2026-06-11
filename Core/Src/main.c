@@ -39,6 +39,12 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
+typedef enum {
+  // 固定输出模式
+  OUTPUT_MODE_PRESET,
+  // 自定义输出模式
+  OUTPUT_MODE_CUSTOM,
+} SysOutState;
 
 /* USER CODE END PTD */
 
@@ -73,8 +79,9 @@ PID_t volt = {
 };
 
 
+SysOutState sysMode = OUTPUT_MODE_PRESET;
 // 0 表示旋钮控制 1 表示蓝牙滑杆控制
-_Bool ctrlMode = 1;
+_Bool ctrlMode;
 
 /* USER CODE END PV */
 
@@ -98,12 +105,35 @@ void keyProcess(void)
 {
   if (Key_GetEvent(KEY1, KEY_EVENT_SINGLE)) {
     // 单击按键1
+    sysMode = (SysOutState)((sysMode + 1) % 2);
 
+    // 进入自定义输出模式 默认为旋钮控制
+    if (sysMode == OUTPUT_MODE_CUSTOM) {
+      ctrlMode = 0;
+    }
+  }
+
+  if (Key_GetEvent(KEY2, KEY_EVENT_SINGLE)) {
+    // 单击按键2
+    if (sysMode == OUTPUT_MODE_PRESET) {
+      volt.Target = 3.3f;
+    }
+  }
+
+  if (Key_GetEvent(KEY3, KEY_EVENT_SINGLE)) {
+    // 单击按键3
+    if (sysMode == OUTPUT_MODE_PRESET) {
+      volt.Target = 5.0f;
+    }
   }
 
   if (Key_GetEvent(KEY4, KEY_EVENT_SINGLE)) {
     // 单击按键4
-
+    if (sysMode == OUTPUT_MODE_PRESET) {
+      volt.Target = 12.0f;
+    } else if (sysMode == OUTPUT_MODE_CUSTOM) {
+      ctrlMode = !ctrlMode;
+    }
   }
 }
 
@@ -116,8 +146,10 @@ void btProcess(void)
     if (packet.type == PACKET_SLIDER) {
       switch (packet.data.slider.id) {
         case SLIDER_ID_TAR:
-          if (ctrlMode == 1) {
-            volt.Target = packet.data.slider.value;
+          if (sysMode == OUTPUT_MODE_CUSTOM) {
+            if (ctrlMode == 1) {
+              volt.Target = packet.data.slider.value;
+            }
           }
           break;
 
@@ -141,8 +173,10 @@ void sysProcess(void)
 {
   encoderVlue = Encoder_GetCount();
 
-  if (ctrlMode == 0) {
-    volt.Target = encoderVlue * voltageStep;
+  if (sysMode == OUTPUT_MODE_CUSTOM) {
+    if (ctrlMode == 0) {
+      volt.Target = encoderVlue * voltageStep;
+    }
   }
 }
 
