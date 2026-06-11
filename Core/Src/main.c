@@ -27,6 +27,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <math.h>
+
 #include "oled.h"
 #include "beep_led.h"
 #include "key.h"
@@ -79,7 +81,7 @@ PID_t volt = {
 };
 
 
-SysOutState sysMode = OUTPUT_MODE_PRESET;
+SysOutState sysMode = OUTPUT_MODE_CUSTOM;
 // 0 表示旋钮控制 1 表示蓝牙滑杆控制
 _Bool ctrlMode;
 
@@ -96,14 +98,14 @@ void SystemClock_Config(void);
 void oledProcess(void)
 {
   if (volt.Target < 10.0f) {
-    OLED_Printf(00, 32, OLED_8X16, "T:%-.2fV ", volt.Target);
+    OLED_Printf(00, 28, OLED_8X16, "T:%-.2fV ", volt.Target);
   } else {
-    OLED_Printf(00, 32, OLED_8X16, "T:%-.1fV ", volt.Target);
+    OLED_Printf(00, 28, OLED_8X16, "T:%-.1fV ", volt.Target);
   }
   if (volt.Actual < 10.0f) {
-    OLED_Printf(64, 32, OLED_8X16, "A:%-.2fV ", volt.Actual);
+    OLED_Printf(64, 28, OLED_8X16, "A:%-.2fV ", volt.Actual);
   } else {
-    OLED_Printf(64, 32, OLED_8X16, "A:%-.1fV ", volt.Actual);
+    OLED_Printf(64, 28, OLED_8X16, "A:%-.1fV ", volt.Actual);
   }
 
   if (sysMode == OUTPUT_MODE_PRESET) {
@@ -131,6 +133,8 @@ void keyProcess(void)
     // 进入自定义输出模式 默认为旋钮控制
     if (sysMode == OUTPUT_MODE_CUSTOM) {
       ctrlMode = 0;
+    } else if (sysMode == OUTPUT_MODE_PRESET) {
+      volt.Target = 3.3f;
     }
   }
 
@@ -192,12 +196,29 @@ void btProcess(void)
 
 void sysProcess(void)
 {
+  static _Bool ledState = 0, PLEDState = 1;
+
   encoderVlue = Encoder_GetCount();
 
   if (sysMode == OUTPUT_MODE_CUSTOM) {
     if (ctrlMode == 0) {
       volt.Target = encoderVlue * voltageStep;
     }
+  }
+
+  if (fabs(volt.Actual - volt.Target) > 0.5f) {
+    ledState = 1;
+  } else {
+    ledState = 0;
+  }
+
+  if (ledState != PLEDState) {
+    if (ledState == 1) {
+      Device_SetMode(LED_INDEX, MODE_BLINK_FAST);
+    } else {
+      Device_SetMode(LED_INDEX, MODE_BLINK_SHORT);
+    }
+    PLEDState = ledState;
   }
 }
 
